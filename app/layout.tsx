@@ -22,6 +22,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </header>
           {children}
         </main>
+        <footer>
+          <p>Copyright 2026 Strong Gym</p>
+          <p>All rights reserved</p>
+          <p>Contact us at <a href="mailto:info@stronggym.com">info@stronggym.com</a></p>
+          <p>Follow us on <a href="https://www.instagram.com/stronggym">Instagram</a></p>
+          <p>Follow us on <a href="https://www.facebook.com/stronggym">Facebook</a></p>
+          <p>Follow us on <a href="https://www.twitter.com/stronggym">Twitter</a></p>
+          <p>Follow us on <a href="https://www.linkedin.com/company/stronggym">LinkedIn</a></p>
+          <p>Follow us on <a href="https://www.youtube.com/channel/UC_x5XG1OV2P6BVIhjj9pi-g">YouTube</a></p>
+        </footer>
       </body>
     </html>
   );

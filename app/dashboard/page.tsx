@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { AttendanceHeatmap } from "@/components/AttendanceHeatmap";
+import { UserCard } from "@/components/UserCard";
 import { getServerSession } from "@/lib/session";
 import { getCurrentChallenge, listAttendance, listFeedPosts } from "@/lib/repositories";
 
@@ -10,33 +12,20 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const [attendance, challenge, feedPosts] = await Promise.all([
-    listAttendance(session.userId),
+  const [attendanceRollup, challenge, feedPosts] = await Promise.all([
+    listAttendance(session.userId, 90),
     getCurrentChallenge(),
     listFeedPosts()
   ]);
 
-  const points = attendance.filter((a) => a.attended).length * 10;
+  const points =
+    attendanceRollup.reduce((sum, row) => sum + Math.max(0, Math.floor(row.visitCount)), 0) * 10;
 
   return (
     <section className="grid" style={{ gap: 12 }}>
-      <div className="card">
-        <h2>Welcome, {session.name}</h2>
-        <p>Loyalty points: {points}</p>
-      </div>
+      <UserCard name={session.name} loyaltyPoints={points} />
 
-      <div className="card">
-        <h3>Attendance Heatmap (last 90 days)</h3>
-        <div className="heatmap">
-          {attendance.map((item) => (
-            <div
-              key={item.date}
-              className={`heat ${item.attended ? "active" : ""}`}
-              title={`${item.date} - ${item.attended ? "Attended" : "Missed"}`}
-            />
-          ))}
-        </div>
-      </div>
+      <AttendanceHeatmap initialAttendance={attendanceRollup} initialLookback={90} />
 
       <div className="card grid">
         <h3>Competition of the Month</h3>

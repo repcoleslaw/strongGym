@@ -1,7 +1,32 @@
 import { ObjectId } from "mongodb";
 
+import {
+  HEATMAP_MAX_DAYS,
+  addDaysToDateKey,
+  lookbackRangeStartKey,
+  normalizeHeatmapLookbackDays,
+  sliceLastAttendanceDays,
+  utcTodayKey
+} from "@/lib/attendance-heatmap";
 import { getDb } from "@/lib/mongodb";
 import type { AttendanceRecord, Challenge, FeedPost } from "@/lib/types";
+
+/** Supports legacy Mongo documents that used `attended: boolean`. */
+export function normalizeAttendanceRecord(doc: AttendanceRecord & { attended?: boolean }): AttendanceRecord {
+  if (typeof doc.visitCount === "number" && !Number.isNaN(doc.visitCount)) {
+    return {
+      userId: doc.userId,
+      date: doc.date,
+      visitCount: Math.max(0, Math.floor(doc.visitCount))
+    };
+  }
+  const legacy = doc.attended === true ? 1 : 0;
+  return {
+    userId: doc.userId,
+    date: doc.date,
+    visitCount: legacy
+  };
+}
 
 const useMockData = process.env.USE_MOCK_DATA === "true" || !process.env.MONGODB_URI;
 
@@ -17,22 +42,19 @@ function getMonthKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function makeDateKey(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
-
 function buildAttendance(userId: string, days: number): AttendanceRecord[] {
-  const today = new Date();
+  const end = utcTodayKey();
   const records: AttendanceRecord[] = [];
   for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const dayOfWeek = d.getDay();
-    const attended = dayOfWeek !== 0 && Math.random() > 0.3;
+    const dateKey = addDaysToDateKey(end, -i);
+    const [y, m, d] = dateKey.split("-").map(Number);
+    const dayOfWeek = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+    const base = dayOfWeek !== 0 && Math.random() > 0.3 ? 1 : 0;
+    const visitCount = base > 0 ? base + Math.floor(Math.random() * 3) : 0;
     records.push({
       userId,
-      date: makeDateKey(d),
-      attended
+      date: dateKey,
+      visitCount
     });
   }
   return records;
@@ -46,8 +68,8 @@ function createMockStore(): MockStore {
 
   return {
     attendanceByUser: new Map<string, AttendanceRecord[]>([
-      ["u-100", buildAttendance("u-100", 90)],
-      ["a-001", buildAttendance("a-001", 90)]
+      ["u-100", buildAttendance("u-100", HEATMAP_MAX_DAYS)],
+      ["a-001", buildAttendance("a-001", HEATMAP_MAX_DAYS)]
     ]),
     challenges: [
       {
@@ -87,41 +109,88 @@ function createMockStore(): MockStore {
   };
 }
 
-export async function listAttendance(userId: string) {
+export async function listAttendance(userId: string, lookback?: number) {
+  const days = normalizeHeatmapLookbackDays(lookback ?? 90);
+  const rangeStart = lookbackRangeStartKey(days);
+
   if (useMockData) {
-    const existing = mockStore.attendanceByUser.get(userId);
-    if (existing) {
-      return existing;
+    let existing = mockStore.attendanceByUser.get(userId);
+    if (!existing) {
+      existing = buildAttendance(userId, HEATMAP_MAX_DAYS);
+      mockStore.attendanceByUser.set(userId, existing);
     }
-    const seeded = buildAttendance(userId, 90);
-    mockStore.attendanceByUser.set(userId, seeded);
-    return seeded;
+    return sliceLastAttendanceDays(existing, days);
   }
 
   const db = await getDb();
-  const rows = await db
-    .collection<AttendanceRecord>("attendance")
-    .find({ userId })
+  const coll = db.collection<AttendanceRecord>("attendance");
+  let rows = await coll
+    .find({ userId, date: { $gte: rangeStart } })
     .sort({ date: 1 })
     .toArray();
 
   if (rows.length > 0) {
-    return rows;
+    return rows.map((r) => normalizeAttendanceRecord(r as AttendanceRecord & { attended?: boolean }));
   }
 
-  const today = new Date();
+  const end = utcTodayKey();
   const seeded: AttendanceRecord[] = [];
-  for (let i = 0; i < 90; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
+  for (let i = HEATMAP_MAX_DAYS - 1; i >= 0; i--) {
     seeded.push({
       userId,
-      date: d.toISOString().slice(0, 10),
-      attended: Math.random() > 0.45
+      date: addDaysToDateKey(end, -i),
+      visitCount: Math.random() > 0.45 ? 1 + Math.floor(Math.random() * 2) : 0
     });
   }
-  await db.collection<AttendanceRecord>("attendance").insertMany(seeded);
-  return seeded.reverse();
+  await coll.insertMany(seeded);
+  rows = await coll
+    .find({ userId, date: { $gte: rangeStart } })
+    .sort({ date: 1 })
+    .toArray();
+  return rows.map((r) => normalizeAttendanceRecord(r as AttendanceRecord & { attended?: boolean }));
+}
+
+/**
+ * Increase visit count by 1 for the given UTC calendar day (YYYY-MM-DD).
+ */
+export async function incrementAttendanceVisit(userId: string, dateKey: string) {
+  if (useMockData) {
+    let rows = mockStore.attendanceByUser.get(userId);
+    if (!rows) {
+      rows = buildAttendance(userId, HEATMAP_MAX_DAYS);
+      mockStore.attendanceByUser.set(userId, rows);
+    }
+    const idx = rows.findIndex((r) => r.date === dateKey);
+    if (idx >= 0) {
+      const prev = normalizeAttendanceRecord(rows[idx] as AttendanceRecord & { attended?: boolean });
+      const next: AttendanceRecord = {
+        ...prev,
+        visitCount: prev.visitCount + 1
+      };
+      const copy = [...rows];
+      copy[idx] = next;
+      mockStore.attendanceByUser.set(userId, copy);
+      return next;
+    }
+    const inserted: AttendanceRecord = { userId, date: dateKey, visitCount: 1 };
+    const copy = [...rows, inserted].sort((a, b) => a.date.localeCompare(b.date));
+    mockStore.attendanceByUser.set(userId, copy);
+    return inserted;
+  }
+
+  const db = await getDb();
+  const coll = db.collection<AttendanceRecord & { attended?: boolean }>("attendance");
+  const existing = await coll.findOne({ userId, date: dateKey });
+  const base = existing
+    ? normalizeAttendanceRecord(existing as AttendanceRecord & { attended?: boolean })
+    : { userId, date: dateKey, visitCount: 0 };
+  const next: AttendanceRecord = {
+    userId,
+    date: dateKey,
+    visitCount: base.visitCount + 1
+  };
+  await coll.replaceOne({ userId, date: dateKey }, next, { upsert: true });
+  return next;
 }
 
 export async function getCurrentChallenge() {

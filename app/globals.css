@@ -43,21 +43,142 @@ a {
   gap: 8px;
 }
 
-.heatmap {
-  display: grid;
-  grid-template-columns: repeat(14, 1fr);
-  gap: 4px;
+.heatmap-card--loading {
+  opacity: 0.72;
 }
 
-.heat {
-  width: 18px;
-  height: 18px;
-  border-radius: 3px;
+.heatmap-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.heatmap-log-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.heatmap-log-btn {
+  padding: 8px 14px;
+  font-size: 0.9rem;
+}
+
+.heatmap-log-meta {
+  font-size: 0.85rem;
+  color: #9aa8c4;
+}
+
+.heatmap-log-meta code {
+  font-size: 0.8em;
+  color: #c5d0e8;
+}
+
+.heatmap-title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.heatmap-range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.heatmap-range-btn {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  border-radius: 8px;
+}
+
+.heatmap-range-btn--active {
+  border-color: #4c8dff;
+  background: #1a2845;
+  color: #dfeaff;
+}
+
+.heatmap-range-btn:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.heatmap-error {
+  color: #ff8b8b;
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+}
+
+.heatmap-calendar-scroll {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.heatmap-calendar-grid {
+  display: grid;
+  gap: 3px;
+  align-items: center;
+  min-width: min-content;
+}
+
+.heatmap-grid-month {
+  font-size: 10px;
+  color: #8b9bb4;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heatmap-grid-dow {
+  font-size: 10px;
+  color: #8b9bb4;
+  text-align: right;
+  padding-right: 6px;
+  line-height: 1.2;
+  align-self: center;
+}
+
+.heatmap-cell {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
   background: #1b2438;
 }
 
-.heat.active {
+.heatmap-cell--v0 {
+  background: #252f45;
+}
+
+.heatmap-cell--v1 {
+  background: #1f6f32;
+}
+
+.heatmap-cell--v2 {
   background: #2ea043;
+}
+
+.heatmap-cell--v3 {
+  background: #3dd166;
+}
+
+.heatmap-cell--v4 {
+  background: #56f085;
+}
+
+.heatmap-cell--pad {
+  background: #121722;
+  opacity: 0.45;
+}
+
+.heatmap-legend {
+  margin: 12px 0 0;
+  font-size: 0.75rem;
+  color: #7d8aa3;
 }
 
 input,

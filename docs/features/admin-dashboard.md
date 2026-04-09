@@ -47,7 +47,7 @@ This feature relies on the following collections:
 - `feed_posts`
   - `_id`, `title`, `body`, `source`, `author`, `postedAt`
 - `attendance` (read-only in v1 dashboard)
-  - `_id`, `userId`, `date`, `attended`
+  - `_id`, `userId`, `date`, `visitCount` (legacy: `attended`)
 
 ## API and Server Behavior (Current)
 - `POST /api/admin/feed`

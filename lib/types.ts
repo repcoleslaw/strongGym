@@ -10,7 +10,8 @@ export type SessionUser = {
 export type AttendanceRecord = {
   userId: string;
   date: string;
-  attended: boolean;
+  /** Number of gym visits logged for this calendar day (UTC date key). */
+  visitCount: number;
 };
 
 export type ChallengeSubmission = {

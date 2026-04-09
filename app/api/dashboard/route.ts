@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   }
 
   const [attendance, challenge, feedPosts] = await Promise.all([
-    listAttendance(sessionResult.userId),
+    listAttendance(sessionResult.userId, 90),
     getCurrentChallenge(),
     listFeedPosts()
   ]);
@@ -20,6 +20,6 @@ export async function GET(req: NextRequest) {
     attendance,
     challenge,
     feedPosts,
-    points: attendance.filter((a) => a.attended).length * 10
+    points: attendance.reduce((sum, row) => sum + Math.max(0, Math.floor(row.visitCount)), 0) * 10
   });
 }
