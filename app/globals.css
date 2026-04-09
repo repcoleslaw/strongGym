@@ -1,0 +1,77 @@
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  background: #090c12;
+  color: #e8edf7;
+}
+
+main {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+a {
+  color: #9ec5ff;
+  text-decoration: none;
+}
+
+.card {
+  background: #111726;
+  border: 1px solid #1f2a44;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.grid {
+  display: grid;
+  gap: 8px;
+}
+
+.heatmap {
+  display: grid;
+  grid-template-columns: repeat(14, 1fr);
+  gap: 4px;
+}
+
+.heat {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  background: #1b2438;
+}
+
+.heat.active {
+  background: #2ea043;
+}
+
+input,
+textarea,
+button,
+select {
+  background: #0f1422;
+  color: #e8edf7;
+  border: 1px solid #2a385a;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
